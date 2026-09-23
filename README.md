@@ -6,40 +6,46 @@ A clean, modular Terraform configuration to provision a public EC2 instance with
 
 ## 🏗️ Architecture Overview
 
-The following diagram illustrates the relationship between all AWS and local resources created by this project:
+The infrastructure deployed by this Terraform project is structured as follows:
 
-```mermaid
-graph TD
-    subgraph Local Environment
-        KEY_FILE["Local File: terraform-ec2-key.pem"]
-    end
-
-    subgraph AWS Cloud (Region: eu-north-1)
-        subgraph VPC ["AWS VPC (10.0.0.0/16)"]
-            IGW["Internet Gateway (terraform-igw)"]
-            
-            subgraph Subnet ["Public Subnet (10.0.1.0/24)"]
-                EC2["EC2 Instance (Amazon Linux 2023)<br/>t3.micro"]
-            end
-            
-            RT["Route Table (0.0.0.0/0 -> IGW)"]
-            SG["Security Group (Allow SSH:22, All Outbound)"]
-            KEY_PAIR["AWS Key Pair (terraform-ec2-key)"]
-        end
-    end
-
-    TLS["TLS Private Key Generator (RSA 4096)"] -->|Generates Public Key| KEY_PAIR
-    TLS -->|Generates Private Key| KEY_FILE
-    KEY_PAIR -->|Attached to| EC2
-    SG -->|Secures Inbound/Outbound| EC2
-    Subnet -->|Hosts| EC2
-    RT -->|Associated with| Subnet
-    IGW -->|Target in| RT
-    VPC -->|Contains| Subnet
-    VPC -->|Contains| IGW
-    VPC -->|Contains| RT
-    VPC -->|Contains| SG
 ```
+[ Local Machine ]
+  │
+  ├── Private SSH Key (terraform-ec2-key.pem)
+  │
+  ▼ (SSH Access on Port 22)
+[ AWS Cloud : region = eu-north-1 ]
+  │
+  └── AWS VPC (10.0.0.0/16)
+        │
+        ├── Internet Gateway (terraform-igw)
+        │     │ (Routes internet traffic: 0.0.0.0/0)
+        │     ▼
+        ├── Route Table (terraform-public-route-table)
+        │     │ (Associated with)
+        │     ▼
+        ├── Public Subnet (10.0.1.0/24)
+        │     │
+        │     └── EC2 Instance (terraform-t3-small)
+        │           ├── AMI: Amazon Linux 2023
+        │           ├── Instance Type: t3.micro
+        │           ├── Security Group: terraform-ec2-sg (Allows SSH:22)
+        │           └── Key Pair: terraform-ec2-key
+        │
+        └── AWS Key Pair & Security Group
+```
+
+### Resource Flow & Network Hierarchy
+
+1. **VPC Network**: An isolated network container (`10.0.0.0/16`) created in AWS.
+2. **Internet Access**: An **Internet Gateway** is attached to the VPC to enable internet connectivity.
+3. **Subnet & Routing**: A **Public Subnet** (`10.0.1.0/24`) is linked to a **Route Table** that routes `0.0.0.0/0` traffic through the Internet Gateway.
+4. **Compute Instance**: An **EC2 Instance** (`t3.micro`) runs inside the Public Subnet with an auto-assigned public IP address.
+5. **Security & Key Management**:
+   - A **TLS RSA Key Pair** is dynamically generated during deployment.
+   - The public key is registered in AWS as an **AWS Key Pair** and attached to the EC2 instance.
+   - The private key is saved locally to `terraform-ec2-key.pem` with `0600` file permissions.
+   - A **Security Group** acts as a virtual firewall allowing inbound SSH (port 22) traffic and all outbound traffic.
 
 ---
 
