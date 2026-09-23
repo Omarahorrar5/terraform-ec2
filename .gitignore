@@ -1,0 +1,25 @@
+# Local .terraform directory (provider binaries & plugins)
+.terraform/
+
+# Terraform state files (contain state mapping and plaintext secrets)
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Ignore override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore variable definition files containing secrets or environment configs
+*.tfvars
+*.tfvars.json
+
+# Ignore generated SSH private keys and secret credentials
+*.pem
+*.key
+
+# Ignore temporary CLI state lock files
+.terraform.tfstate.lock.info
